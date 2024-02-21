@@ -11,4 +11,5 @@ The agent must find rooms with a reward. At first, he will walk randomly, and th
 
 
 space bar - Acceleration
+
 1 - show the critic network score
