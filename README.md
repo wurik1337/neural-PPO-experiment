@@ -8,3 +8,7 @@ thanks a lot to HannulaTero for his project https://github.com/HannulaTero/Build
 The agent must find rooms with a reward. At first, he will walk randomly, and then he will find the optimal path.
 
 ![image](https://github.com/wurik1337/neural-a2c-experiment/assets/54418600/555fffb4-1280-4200-ad29-df80c353c0af)
+
+
+space bar - Acceleration
+1 - show the critic network score
