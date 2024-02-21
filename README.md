@@ -4,6 +4,7 @@ There are probably errors in the code, it is possible that I did everything wron
 a2c is a neural network that relates to reinforcement learning. Where 2 networks are used 1)Actor 2)Critic
 
 thanks a lot to HannulaTero for his project https://github.com/HannulaTero/Building-Neural-Network-with-GMS2-
+(much is taken from this project)
 
 The agent must find rooms with a reward. At first, he will walk randomly, and then he will find the optimal path.
 
