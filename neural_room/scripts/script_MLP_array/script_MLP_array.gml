@@ -144,8 +144,8 @@ function mlp_array(layerSizeArray) constructor {
 		for(var j = 0; j < layerSizes[i]; j++) {//по нейронам в последнем слое
 			delta[i][j] = 0;
 	    }
-		delta[0][0]=0
-		delta[0][1]=0
+		for (var d=0;d<array_length(delta[0]);d++)
+		delta[0][d]=0
 		// Normally: error += -target * ln(prediction)
 		// Find index for hot						//		
 		for(var j = 0; j < array_length(targets_one_hot); j++) {//default for(var j = 0; j < layerSizes[i]; j++)	// But as targets array is type of [1, 0, 0, 0]
@@ -153,10 +153,9 @@ function mlp_array(layerSizeArray) constructor {
 			{
 				// Wrong: error += -0 * ln(prediction)		-> error += 0;
 					error = 1//(-1)*targets_one_hot[j][w] * ln(predictions_softmax[j][w]);	//default error = (-1) * ln(predictions_softmax[j])///было и так error = (-1) * ln(predictions_softmax[targets_one_hot[j]])*advantage[0];; /// Correct: error += -1 * ln(prediction)	-> error += -ln(prediction)
-					//show_message(predictions_softmax[j][w])
-					//show_message(ln(predictions_softmax[j][w]))
+
 					delta[i][w]=(-1)*targets_one_hot[j][w] / predictions_softmax[j][w];//*advantage[j]//default delta[i][w]=(-1)*targets_one_hot[j][w] / predictions_softmax[j][w];	// This can be simplified!
-					//show_message(predictions_softmax[j][w])
+
 					
 			}
 
@@ -181,8 +180,8 @@ function mlp_array(layerSizeArray) constructor {
 			delta[i][j] = 0;
 	    }
 
-		delta[0][0]=0
-		delta[0][1]=0
+		for (var d=0;d<array_length(delta[0]);d++)
+		delta[0][d]=0
 		// Normally: error += -target * ln(prediction)
 		// Find index for hot						//		
 		for(var j = 0; j < array_length(targets_one_hot); j++) {//default for(var j = 0; j < layerSizes[i]; j++)	// But as targets array is type of [1, 0, 0, 0]
@@ -192,17 +191,13 @@ function mlp_array(layerSizeArray) constructor {
 				if (targets_one_hot[j][w] == 1) {					// Wrong: error += -0 * ln(prediction)		-> error += 0;
 					error = (-1) * ln(predictions_softmax[j][w]);	//default error = (-1) * ln(predictions_softmax[j])///было и так error = (-1) * ln(predictions_softmax[targets_one_hot[j]])*advantage[0];; /// Correct: error += -1 * ln(prediction)	-> error += -ln(prediction)
 					delta[i][w]= output[i][w]-(advantage[j]) // / predictions_softmax[j][w];//*advantage[j]//default delta[i][j] = (-1) / predictions_softmax[j]///было и так delta[i][w] = (-1) / predictions_softmax[j][w]*advantage[j]	// This can be simplified!
-					//show_message(predictions_softmax[j][w])
-					if keyboard_check(vk_control)
-					{
-						show_message(advantage)
-						show_message(output[i][w]-(advantage[j]*(-ln(predictions_softmax[j][w]))) ) //output[i][w]-(advantage[j])
-					}
+
+
 					//delta[i][w] =(-1) / (predictions_softmax[j][w])//оригинал строки
 					//break;								// Just search "hot" index.
 				}
-				//else
-				//delta[i][w]= output[i][w]-(-advantage[j])
+				else
+				delta[i][w]= output[i][w]-(-advantage[j])
 			}
 
 	    }
@@ -234,17 +229,14 @@ delta[0][d]=0
 				{
 				    var ratio = target_probs[j][w] / old_probs[j][w];
 				    var clipped_ratio = clamp(ratio, 1 - epsilon, 1 + epsilon);//ограничитель
-				//show_message($"target_probs{target_probs}old_probs{old_probs}advantages{advantages} targets_one_hot {one_hot}")
+
 		
 				    var surrogate_loss = -min(ratio * advantages[j], clipped_ratio * advantages[j]);
 				    loss += surrogate_loss;
-					//var s=sign(surrogate_loss)
 					delta[i][w]=surrogate_loss
 				}
 				else
 			delta[i][w]= output[i][w]
-			//show_message(delta)///я на этом моменте остановился, я хз что делать с дельта,one_hot я добавил ради дельта но хз нужен или нет.
-			// Вычисление градиентов (дельта)
 	        //if (ratio * advantages[i] > surrogate_loss) {
 	        //    delta[j][one_hot[i]] += surrogate_loss / old_probs[i];
 	        //} else {
