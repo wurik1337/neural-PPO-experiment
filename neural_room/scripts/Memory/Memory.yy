@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "Memory",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "example",
-    "path": "folders/MLP Simple/example.yy",
+  "$GMScript":"",
+  "%Name":"Memory",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"Memory",
+  "parent":{
+    "name":"neural scripts",
+    "path":"folders/MLP Simple/example/neural scripts.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

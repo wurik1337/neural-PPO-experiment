@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "scr_mouseCheckBoxGUI",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "BoundsChecking",
-    "path": "folders/Scripts/Utility/BoundsChecking.yy",
+  "$GMScript":"",
+  "%Name":"scr_mouseCheckBoxGUI",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_mouseCheckBoxGUI",
+  "parent":{
+    "name":"BoundsChecking",
+    "path":"folders/Scripts/ScriptLineGraph/Utility/BoundsChecking.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

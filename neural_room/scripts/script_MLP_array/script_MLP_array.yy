@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "script_MLP_array",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "Tennora_exam",
-    "path": "folders/MLP Simple/Tennora_exam.yy",
+  "$GMScript":"",
+  "%Name":"script_MLP_array",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"script_MLP_array",
+  "parent":{
+    "name":"Tennora_exam",
+    "path":"folders/MLP Simple/Tennora_exam.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }

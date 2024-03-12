@@ -28,7 +28,7 @@ draw_text(x+100,y+offset+40,"critic output "+string(mlpaC.Output()))
 //cost
 draw_text(x+100,y-40+offset,"actor cost "+string(mlpaA.delta))//string(mlpaA.delta[array_length(mlpaA.delta)-1]
 
-draw_text(x+100,y-80+offset,"session - on sbrasivaetsa v Apply "+string(batchPosition))
+draw_text(x+100,y-80+offset,"session - Apply "+string(batchPosition))
 
 draw_text(0,room_height/2+70+offset,string(mlpaC.weights)+"-weight critic")
 draw_text(0,room_height/2+90+offset,string(mlpaC.bias)+"-bias critic")

@@ -1,11 +1,13 @@
 {
-  "resourceType": "GMScript",
-  "resourceVersion": "1.0",
-  "name": "scr_lineGraphValueAdd",
-  "isCompatibility": false,
-  "isDnD": false,
-  "parent": {
-    "name": "lineGraph",
-    "path": "folders/Scripts/Graphs/lineGraph.yy",
+  "$GMScript":"",
+  "%Name":"scr_lineGraphValueAdd",
+  "isCompatibility":false,
+  "isDnD":false,
+  "name":"scr_lineGraphValueAdd",
+  "parent":{
+    "name":"lineGraph",
+    "path":"folders/Scripts/ScriptLineGraph/Graphs/lineGraph.yy",
   },
+  "resourceType":"GMScript",
+  "resourceVersion":"2.0",
 }
