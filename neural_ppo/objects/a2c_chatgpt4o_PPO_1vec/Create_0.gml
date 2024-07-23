@@ -412,7 +412,7 @@ function SampleAction(probabilities) {
 policy_network = new mlp_array([1,3,2],[Tanh,Tanh]);
 
 // Создаём сеть критика (Value network)
-value_network = new mlp_array([1,2,1],[Tanh,Tanh,Tanh]);
+value_network = new mlp_array([1,2,1],[Tanh,Tanh]);
 
 // Инициализируем память для PPO
 memory = new Memory();
