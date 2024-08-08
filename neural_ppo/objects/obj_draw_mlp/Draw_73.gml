@@ -1,13 +1,10 @@
 /// @desc DRAW MLP
-target = a2c_chatgpt4o_PPO_2vec;
 
 if (!is_undefined(target))
 and (instance_exists(target)) {
-	// Highlight which bird
-	//draw_sprite_ext(spr_example_circle_hollow, 0, target.x, target.y, 1, 1, 0, c_white, .75);
 	
 	// Draw network
-	var mlp = target.policy_network;
+	var mlp = target.value_network;
 
 	var iEnd, jEnd;
 		iEnd = mlp.layerCount;

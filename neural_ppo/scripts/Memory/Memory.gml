@@ -1,5 +1,3 @@
-// Script assets have changed for v2.3.0 see
-// https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 function Memory() constructor {
     // Создание кортежа данных (буфера)
     enum typePPO {
@@ -97,7 +95,8 @@ function array_std(array) {
 	}
 	return sqrt(sum / array_length(array));
 }
-	
+
+
 // Вспомогательная функция для расчета дисконтированных наград
 function calculate_returns(rewards, gamma, normalize, use_discount) {
     var discounted_rewards = array_create(array_length(rewards));
@@ -125,29 +124,60 @@ function calculate_returns(rewards, gamma, normalize, use_discount) {
     return discounted_rewards;
 }
 
+// Функция для нахождения минимального значения в массиве
+function array_min(arr) {
+    var min_val = arr[0];
+    for (var i = 1; i < array_length(arr); i++) {
+        if (arr[i] < min_val) {
+            min_val = arr[i];
+        }
+    }
+    return min_val;
+}
+
+// Функция для нахождения максимального значения в массиве
+function array_max(arr) {
+    var max_val = arr[0];
+    for (var i = 1; i < array_length(arr); i++) {
+        if (arr[i] > max_val) {
+            max_val = arr[i];
+        }
+    }
+    return max_val;
+}
+
 
 /// @func calculate_advantage
-/// @desc Вычисляет преимущества как разницу между возвратами и оценками состояний, с опциональной поддержкой GAE
+/// @desc Вычисляет обобщенные оценки преимущества (GAE) и нормализует их при необходимости
 /// @param {array} rewards - массив вознаграждений
 /// @param {array} values - массив оценок ценностей состояний
-/// @param {array} next_values - массив оценок ценностей следующих состояний (если GAE отключен, это может быть просто `values`)
+/// @param {array} next_values - массив оценок ценностей следующих состояний
 /// @param {real} gamma - коэффициент дисконтирования
-/// @param {real} lambda - параметр для обобщенной оценки преимущества (используется только если GAE включен)
-/// @param {bool} use_gae - флаг для включения или отключения GAE
+/// @param {real} lambda - параметр для обобщенной оценки преимущества
+/// @param {bool} use_gae - использовать ли GAE
+/// @param {bool} normalize - нормализовать ли значения преимущества
 /// @return {array} - массив оценок преимущества
-function calculate_advantage(rewards, values, next_values, gamma, lambda, use_gae) {
+function calculate_advantage(rewards, values, next_values, gamma, lambda, use_gae, normalize) {
     var advantage = array_create(array_length(rewards), 0);
 
     if (use_gae) {
         var _gae = 0;
         for (var t = array_length(rewards) - 1; t >= 0; t--) {
-            var delta = rewards[t] + gamma * next_values[t] - values[t];//  var delta = rewards[t] + gamma * next_values[t] - values[t];
+            var delta = rewards[t] + gamma * next_values[t] - values[t];
             _gae = delta + gamma * lambda * _gae;
             advantage[t] = _gae;
         }
     } else {
         for (var t = 0; t < array_length(rewards); t++) {
             advantage[t] = next_values[t] - values[t];
+        }
+    }
+
+    if (normalize) {
+        var _mean = array_mean(advantage);
+        var std = array_std(advantage);
+        for (var t = 0; t < array_length(advantage); t++) {
+            advantage[t] = (advantage[t] - _mean) / std;
         }
     }
 

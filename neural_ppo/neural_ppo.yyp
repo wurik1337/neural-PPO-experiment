@@ -38,9 +38,8 @@
   "resources":[
     {"id":{"name":"fnt_debug","path":"fonts/fnt_debug/fnt_debug.yy",},},
     {"id":{"name":"fnt_debugSm","path":"fonts/fnt_debugSm/fnt_debugSm.yy",},},
-    {"id":{"name":"a2c_chatgpt4o_PPO_1vec","path":"objects/a2c_chatgpt4o_PPO_1vec/a2c_chatgpt4o_PPO_1vec.yy",},},
-    {"id":{"name":"a2c_chatgpt4o_PPO_2vec","path":"objects/a2c_chatgpt4o_PPO_2vec/a2c_chatgpt4o_PPO_2vec.yy",},},
-    {"id":{"name":"obj_example_car_draw_mlp130131","path":"objects/obj_example_car_draw_mlp130131/obj_example_car_draw_mlp130131.yy",},},
+    {"id":{"name":"a2c_chatgpt4o_PPO","path":"objects/a2c_chatgpt4o_PPO/a2c_chatgpt4o_PPO.yy",},},
+    {"id":{"name":"obj_draw_mlp","path":"objects/obj_draw_mlp/obj_draw_mlp.yy",},},
     {"id":{"name":"obj_target","path":"objects/obj_target/obj_target.yy",},},
     {"id":{"name":"room_ppo","path":"rooms/room_ppo/room_ppo.yy",},},
     {"id":{"name":"Function_activation","path":"scripts/Function_activation/Function_activation.yy",},},

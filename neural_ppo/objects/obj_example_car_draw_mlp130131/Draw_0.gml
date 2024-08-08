@@ -1,2 +1,0 @@
-/// @desc 
-draw_self();

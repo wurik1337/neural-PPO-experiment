@@ -1,45 +1,29 @@
+/// @description  Функции, гиперпараметры и т.п.
 randomize()
 
 
-// Гиперпараметры PPO
-gamma = 0.99; // Коэффициент дисконтирования
-lambda = 0.95; // Коэффициент для GAE
-clip_ratio = 0.2; // Коэффициент для ограничения изменений
-policy_learning_rate = 0.1;//0.0003
-value_learning_rate = 0.1;//0.001
-batch_size = 20; // Размер минибатча
-epochs = 1; // Количество эпох для обновления
-
-// Инициализация дополнительных переменных
-training = false;
-total_reward = 0;
-timestep = 0;
-max_timesteps = 20; // Количество шагов до обновления
-
-
-
-
-function mlp_array(layerSizeArray,activationFunctionsArray) constructor {
+function mlp_array(layerSizeArray, activationFunctionsArray) constructor {
     #region /// INITIALIZE NETWORK - Neurons, weights and biases.
     session = 0;
-    layerCount = array_length(layerSizeArray);//число слоёв
-    layerSizes = array_create(layerCount);//число нейроннов в слое
+    layerCount = array_length(layerSizeArray); // число слоёв
+    layerSizes = array_create(layerCount); // число нейронов в слое
     array_copy(layerSizes, 0, layerSizeArray, 0, layerCount);
 
     // Initialize neurons + their deltas.
-    activity = []; //активации нейронов
+    activity = []; // активации нейронов
     output = [];
-    bias = []; //нейрон смещения
+    bias = []; // нейроны смещения
     delta = []; // Разница между фактическим выходом и желаемым результатом. Рассчитано из текущего примера
-    //deltaAdd = [];
-	timestep = 0; //служит для усиления моментов в ОПТИМИЗАТОРАХ (SGD, Adam ....)
+    timestep = 0; // служит для усиления моментов в оптимизаторах (SGD, Adam и т.д.)
 
     for (var i = 0; i < layerCount; i++) {
         activity[i] = array_create(layerSizes[i]);
         output[i] = array_create(layerSizes[i]);
         delta[i] = array_create(layerSizes[i]);
-        //deltaAdd[i] = array_create(layerSizes[i]);
-		bias[i]		= random_range(-.2,+.2);
+        bias[i] = array_create(layerSizes[i]);
+        for (var j = 0; j < layerSizes[i]; j++) {
+            bias[i][j] = random_range(-0.2, 0.2);
+        }
     }
 
     // Initialize weights and gradients
@@ -52,11 +36,11 @@ function mlp_array(layerSizeArray,activationFunctionsArray) constructor {
             weights[i][j] = array_create(layerSizes[i - 1]);
             gradients[i][j] = array_create(layerSizes[i - 1]);
             for (var k = 0; k < layerSizes[i - 1]; k++) {
-                weights[i][j][k] = random_range(-.5, +.5); // Give default random weight.
+                weights[i][j][k] = random_range(-0.5, 0.5); // Give default random weight.
             }
         }
     }
-	
+
 	    // Initialize activation functions
     if (array_length(activationFunctionsArray) != layerCount - 1) {
         show_error("Количество функций активации должно соответствовать количеству слоев, за исключением входного слоя.", true);
@@ -88,33 +72,38 @@ function mlp_array(layerSizeArray,activationFunctionsArray) constructor {
     /// @desc Выполняет прямое распространение через сеть
     /// @param {array} inputData - входные данные для сети
     /// @return {array} - выходные данные сети
-    static Forward = function (inputData) {
-        // Проверяем, совпадает ли размер входных данных с размером первого слоя
-        if (array_length(inputData) != layerSizes[0]) {
-            show_error("Размер входных данных не совпадает с размером первого слоя", true);
-        }
+static Forward = function (inputData) {
+    // Проверяем, совпадает ли размер входных данных с размером первого слоя
+    if (array_length(inputData) != layerSizes[0]) {
+        show_error("Размер входных данных не совпадает с размером первого слоя", true);
+    }
 
-        // Устанавливаем входные данные как выходные данные первого слоя
-        array_copy(output[0], 0, inputData, 0, array_length(inputData));
+    // Устанавливаем входные данные как выходные данные первого слоя
+    array_copy(output[0], 0, inputData, 0, array_length(inputData));
 
-        // Прямое распространение через каждый слой
-        for (var i = 1; i < layerCount; i++) {
-            for (var j = 0; j < layerSizes[i]; j++) {
-                for (var k = 0; k < layerSizes[i - 1]; k++) {
-                    activity[i][j] = output[i - 1][k] * weights[i][j][k]; // Добавляем взвешенные входные данные
-                }
-				// Применяем соответствующую функцию активации к сумме активностей
-                output[i][j] = activationFunctions[i - 1](activity[i][j]+bias[i]);
-                //output[i][j] = Tanh(activity[i][j]+bias[i]);
+    // Прямое распространение через каждый слой
+    for (var i = 1; i < layerCount; i++) {
+        for (var j = 0; j < layerSizes[i]; j++) {
+            activity[i][j] = 0; // Инициализируем сумму активности для нейрона
+
+            for (var k = 0; k < layerSizes[i - 1]; k++) {
+                // Суммируем взвешенные входные данные
+                activity[i][j] += output[i - 1][k] * weights[i][j][k];
             }
+            
+            // Применяем соответствующую функцию активации к сумме активностей + смещение
+            output[i][j] = activationFunctions[i - 1](activity[i][j] + bias[i][j]);
         }
-        // Возвращаем выходной массив последнего слоя
-        return output[layerCount - 1];
     }
 
-    static Output = function() {
-        return activity[layerCount - 1];
-    }
+    // Возвращаем выходной массив последнего слоя
+    return output[layerCount - 1];
+}
+
+static Output = function() {
+    return output[layerCount - 1]; // Возвращаем выходные данные последнего слоя
+}
+
 
 
 
@@ -143,7 +132,7 @@ static Backpropagate = function(updateWeights, learningRate) {
             for (var k = 0; k < layerSizes[i + 1]; k++) {
                 errorSum += delta[i + 1][k] * weights[i + 1][k][j];
             }
-            delta[i][j] = errorSum * activationFunctionsDerivative[i](activity[i][j]); // Используем правильную производную функции активации						
+            delta[i][j] = errorSum * activationFunctionsDerivative[i](activity[i][j]);
         }
     }
 
@@ -151,89 +140,90 @@ static Backpropagate = function(updateWeights, learningRate) {
     updateWeights(learningRate);
 }
 
-    /// @func SGDUpdateWeights
-    /// @desc Метод обновления весов для SGD
-    /// @param {real} learningRate - скорость обучения
-    /// @return {void}
-    static SGDUpdateWeights = function(learningRate) {
-        for (var i = 1; i < layerCount; i++) {
-            for (var j = 0; j < layerSizes[i]; j++) {
-                for (var k = 0; k < layerSizes[i - 1]; k++) {
-                    weights[i][j][k] -= learningRate * delta[i][j] * output[i - 1][k];
-                }
-                bias[i] -= learningRate * delta[i][j];
+
+static SGDUpdateWeights = function(learningRate) {
+    for (var i = 1; i < layerCount; i++) {
+        for (var j = 0; j < layerSizes[i]; j++) {
+            for (var k = 0; k < layerSizes[i - 1]; k++) {
+                weights[i][j][k] -= learningRate * delta[i][j] * output[i - 1][k];
             }
+            bias[i][j] -= learningRate * delta[i][j];
         }
     }
+}
 
-	/// @func AdamUpdateWeights
-	/// @desc Метод обновления весов для Adam с внутренней инициализацией параметров
-	/// @param {real} learningRate - скорость обучения
-	/// @param {real} beta1 - коэффициент для моментов первого порядка
-	/// @param {real} beta2 - коэффициент для моментов второго порядка
-	/// @param {real} epsilon - малое значение для числовой стабильности
-	/// @return {void}
-	static AdamUpdateWeights = function(learningRate) {
-	    // Инициализация параметров
 
-	        var m_t = []; //Моменты первого порядка
-	        var v_t = []; //Моменты второго порядка
-		
-			var epsilon = .001;	// Чтобы не делить на 0.
-			var beta1 = .9; //коэффициент для моментов первого порядка
-			var beta2 = .999; //коэффициент для моментов второго порядка
-	        // Инициализация m_t и v_t
-	        for (var i = 1; i < layerCount; i++) {
-	            m_t[i] = []; //Моменты первого порядка
-	            v_t[i] = []; //Моменты второго порядка
-	            for (var j = 0; j < layerSizes[i]; j++) {
-	                m_t[i][j] = array_create(layerSizes[i - 1]);
-	                v_t[i][j] = array_create(layerSizes[i - 1]);
-	                for (var k = 0; k < layerSizes[i - 1]; k++) {
-	                    m_t[i][j][k] = 0;
-	                    v_t[i][j][k] = 0;
-	                }
-	            }
-	        }
-    
+// Инициализация параметров для Adam вне функции
+ m_t = []; // Моменты первого порядка
+ v_t = []; // Моменты второго порядка
+ m_t_bias = []; // Моменты первого порядка для смещений
+ v_t_bias = []; // Моменты второго порядка для смещений
+ epsilon = .001; // Чтобы не делить на 0.
+ beta1 = .9; // коэффициент для моментов первого порядка
+ beta2 = .999; // коэффициент для моментов второго порядка
+ timestep=0;
 
-	    // Увеличиваем шаг времени
-	    timestep++;
+// Инициализация m_t, v_t, m_t_bias и v_t_bias (вроде можно убрать)
+for (var i = 1; i < layerCount; i++) {
+    m_t[i] = [];
+    v_t[i] = [];
+    m_t_bias[i] = array_create(layerSizes[i]);
+    v_t_bias[i] = array_create(layerSizes[i]);
 
-	    // Обновление весов и смещений
-	    for (var i = 1; i < layerCount; i++) {
-	        for (var j = 0; j < layerSizes[i]; j++) {
-	            for (var k = 0; k < layerSizes[i - 1]; k++) {
+    for (var j = 0; j < layerSizes[i]; j++) {
+        m_t[i][j] = array_create(layerSizes[i - 1]);
+        v_t[i][j] = array_create(layerSizes[i - 1]);
+        for (var k = 0; k < layerSizes[i - 1]; k++) {
+            m_t[i][j][k] = 0;
+            v_t[i][j][k] = 0;
+        }
+        m_t_bias[i][j] = 0;
+        v_t_bias[i][j] = 0;
+    }
+}
 
-	                // Обновляем моменты первого порядка
-	                m_t[i][j][k] = beta1 * m_t[i][j][k] + (1 - beta1) * delta[i][j] * output[i - 1][k];
-	                // Обновляем моменты второго порядка
-	                v_t[i][j][k] = beta2 * v_t[i][j][k] + (1 - beta2) * sqr(delta[i][j] * output[i - 1][k]);
+/// @func AdamUpdateWeights
+/// @desc Метод обновления весов для Adam с внутренней инициализацией параметров
+/// @param {real} learningRate - скорость обучения
+/// @param {real} beta1 - коэффициент для моментов первого порядка
+/// @param {real} beta2 - коэффициент для моментов второго порядка
+/// @param {real} epsilon - малое значение для числовой стабильности
+/// @return {void}
+static AdamUpdateWeights = function(learningRate) {
 
-	                // Корректируем моменты
-	                var m_t_hat = m_t[i][j][k] / (1 - power(beta1, timestep));
-	                var v_t_hat = v_t[i][j][k] / (1 - power(beta2, timestep));
+    // Увеличиваем шаг времени
+    timestep++;
 
-	                // Обновляем веса
-	                weights[i][j][k] -= learningRate * m_t_hat / (sqrt(v_t_hat) + epsilon);
-	            }
+    // Обновление весов и смещений
+    for (var i = 1; i < layerCount; i++) {
+        for (var j = 0; j < layerSizes[i]; j++) {
+            for (var k = 0; k < layerSizes[i - 1]; k++) {
+                // Обновляем моменты первого порядка
+                m_t[i][j][k] = beta1 * m_t[i][j][k] + (1 - beta1) * delta[i][j] * output[i - 1][k];
+                // Обновляем моменты второго порядка
+                v_t[i][j][k] = beta2 * v_t[i][j][k] + (1 - beta2) * sqr(delta[i][j] * output[i - 1][k]);
 
-	            // Обновляем смещения
-	            var bias_update = bias[i] || 0;
-	            // Обновляем моменты для смещений
-	            var m_bias = beta1 * (bias_update) + (1 - beta1) * delta[i][j];
-	            var v_bias = beta2 * (bias_update) + (1 - beta2) * sqr(delta[i][j]);
+                // Корректируем моменты
+                var m_t_hat = m_t[i][j][k] / (1 - power(beta1, timestep));
+                var v_t_hat = v_t[i][j][k] / (1 - power(beta2, timestep));
 
-	            // Корректируем моменты для смещений
-	            var m_t_hat_bias = m_bias / (1 - power(beta1, timestep));
-	            var v_t_hat_bias = v_bias / (1 - power(beta2, timestep));
+                // Обновляем веса
+                weights[i][j][k] -= learningRate * m_t_hat / (sqrt(v_t_hat) + epsilon);
+            }
 
-	            // Обновляем смещения
-	            bias[i] -= learningRate * m_t_hat_bias / (sqrt(v_t_hat_bias) + epsilon);
-			
-	        }
-	    }
-	}
+            // Обновляем моменты для смещений
+            m_t_bias[i][j] = beta1 * m_t_bias[i][j] + (1 - beta1) * delta[i][j];
+            v_t_bias[i][j] = beta2 * v_t_bias[i][j] + (1 - beta2) * sqr(delta[i][j]);
+
+            // Корректируем моменты для смещений
+            var m_t_hat_bias = m_t_bias[i][j] / (1 - power(beta1, timestep));
+            var v_t_hat_bias = v_t_bias[i][j] / (1 - power(beta2, timestep));
+
+            // Обновляем смещения
+            bias[i][j] -= learningRate * m_t_hat_bias / (sqrt(v_t_hat_bias) + epsilon);
+        }
+    }
+}
 		
 #region Loss function
 	/// @func MeanSED
@@ -288,7 +278,7 @@ static PPOLossD = function(predicted, target, old_log_probs, advantages, clip_ra
     for (var i = 0; i < array_length(predicted); i++) {
         // Используем target для получения вероятности выбранного действия
         var action_prob = predicted[i][target[i]];
-        new_log_probs[i] = ln(action_prob);
+        new_log_probs[i] = ln(action_prob);//action_prob-1;
 
         var ratio = exp(new_log_probs[i] - old_log_probs[i]);
         var surr1 = ratio * advantages[i];
@@ -323,53 +313,78 @@ static PPOLossD = function(predicted, target, old_log_probs, advantages, clip_ra
 //};
 
 // Функция награды
-// Агент получает больше награды, когда находится ближе к цели, и меньше награды, когда далеко.
+// Чем ближе агент к цели по осям x и y, тем выше награда
 function rewardFunction(pos_agent, pos_goal) {
-    var distance = abs(pos_agent - pos_goal);
-    var max_distance = 500; // предположим, что максимальное расстояние равно ширине комнаты
+    var distance_x = abs(pos_agent[0] - pos_goal[0]); // расстояние по оси x
+    var distance_y = abs(pos_agent[1] - pos_goal[1]); // расстояние по оси y
+
+    // Общая дистанция как евклидово расстояние
+    var distance = sqrt(distance_x * distance_x + distance_y * distance_y);
+
+    // Максимальное расстояние - диагональ прямоугольной области (комнаты)
+    var max_distance = sqrt(room_width * room_width + room_height * room_height);
+
+    // Награда: чем ближе агент к цели, тем выше награда (от 0 до 1)
     var reward = (max_distance - distance) / max_distance;
     return reward;
-};
+}
+	
 
 // Шаг в окружении
-function environmentStep(action) {
-	var old_state = x/room_width;
+function environmentStep(old_state,action) {
     // Обновляем позицию агента на основе действия
     if (action == 0) {
-        x -= room_width*0.02; // Движение влево
+        x -= room_width * 0.02; // Движение влево
     } else if (action == 1) {
-        x += room_width*0.02; // Движение вправо
+        x += room_width * 0.02; // Движение вправо
+    } else if (action == 2) {
+        y -= room_height * 0.02; // Движение вверх
+    } else if (action == 3) {
+        y += room_height * 0.02; // Движение вниз
     }
 
     // Получаем награду
-    var reward = rewardFunction(x, obj_target.x);
+    var reward = rewardFunction([x, y], [obj_target.x, obj_target.y]);
 
     // Создаём новое состояние
-    var next_state = x/room_width;
-    
+    var next_state = getState();
+
     // Определяем, достигнута ли цель (окончание эпизода)
-    var done = abs(x/room_width - obj_target.x/room_width) < 0.1;
+    var done = (abs(x / room_width - obj_target.x / room_width) < 0.1) && (abs(y / room_height - obj_target.y / room_height) < 0.1);
     
     return [next_state, reward, done, old_state];
 }
 
-// Начальное состояние
-position_agent_start = x;
+function getState() {
+	return [x / room_width, y / room_height]; //[obj_target.x / room_width, obj_target.y / room_height,x / room_width, y / room_height];
+}
 
-/// @desc Перезапуск окружения и агента
+// Начальное состояние
+x_position_agent_start = x;
+y_position_agent_start = y;
+
+///Перезапуск окружения и агента
 function Restart() {
     // Обнуляем награды и временные шаги
     total_reward = 0;
     timestep = 0;
 
     // Начальное состояние
-    x = position_agent_start;
+    x = x_position_agent_start;
+	y = y_position_agent_start;
+	
 
     // Очистка памяти
     memory.clear();
 	
-	//state
-	current_state=x
+	policy_network.timestep=0//служит для разгона оптимизаторов 
+	value_network.timestep=0//служит для разгона оптимизаторов 
+
+	//with obj_target //чтобы цель были в разных местах
+	//{
+	//	x=random(room_width)
+	//	y=random(room_height)
+	//}
 }
 
 
@@ -408,11 +423,26 @@ function SampleAction(probabilities) {
 }
 
 
+// Гиперпараметры PPO
+gamma = 0.99; // Коэффициент дисконтирования
+lambda = 0.95; // Коэффициент для GAE
+clip_ratio = 0.2; // Коэффициент для ограничения изменений
+policy_learning_rate = 0.01;//0.01
+value_learning_rate = 0.1;//0.04
+batch_size = 40; //20  Размер минибатча
+epochs = 1; // Количество эпох для обновления
+
+// Инициализация дополнительных переменных
+training = false;
+total_reward = 0;
+timestep = 0;
+max_timesteps = 100; //40 Количество шагов до обновления
+
 // Создаём сеть политики
-policy_network = new mlp_array([1,3,2],[Tanh,Tanh]);
+policy_network = new mlp_array([2,5,4,4],[Tanh,Tanh,Tanh]);//policy_network = new mlp_array([2,3,4],[Tanh,Tanh]);
 
 // Создаём сеть критика (Value network)
-value_network = new mlp_array([1,2,1],[Tanh,Tanh]);
+value_network = new mlp_array([2,5,4,1],[Tanh,Tanh,Tanh]);
 
 // Инициализируем память для PPO
 memory = new Memory();

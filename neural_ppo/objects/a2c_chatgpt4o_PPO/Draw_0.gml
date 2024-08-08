@@ -1,4 +1,4 @@
-/// @description  coment
+/// @description  draw neural
 draw_self()
 
 var offset=50 
@@ -23,5 +23,5 @@ draw_line_color(x+25*i,y+15*n+offset,x+25*(i-1),y+15*s+offset,color_rgb,color_rg
 draw_text(10, 10, "Position: " + string(x));
 draw_text(10, 30, "Goal: " + string(obj_target.x));
 draw_text(10, 50, "Total Reward: " + string(total_reward));
-draw_text_ext(10, 70,$"{value_network.output}  -Output value",20,900)
-draw_text_ext(10, 90,$"{policy_network.output}  -Output policy",20,900)
+draw_text_ext(10, 70,$"{value_network.output}  -Output value",15,1000)
+draw_text_ext(10,180,$"{policy_network.output}  -Output policy",30,1000)
