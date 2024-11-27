@@ -1,4 +1,4 @@
-/// @description  Функции, гиперпараметры и т.п.
+/// @desc Гиперпараметры , сети и тп
 randomize()
 
 
@@ -58,6 +58,9 @@ function mlp_array(layerSizeArray, activationFunctionsArray) constructor {
                 break;
             case Relu:
                 activationFunctionsDerivative[i] = ReluDerivative;
+                break;
+            case LeakyReLU:
+                activationFunctionsDerivative[i] = LeakyReLUDerivative;
                 break;
             case Sigmoid:
                 activationFunctionsDerivative[i] = SigmoidDerivative;
@@ -163,7 +166,7 @@ static SGDUpdateWeights = function(learningRate) {
  beta2 = .999; // коэффициент для моментов второго порядка
  timestep=0;
 
-// Инициализация m_t, v_t, m_t_bias и v_t_bias (вроде можно убрать)
+// Инициализация m_t, v_t, m_t_bias и v_t_bias
 for (var i = 1; i < layerCount; i++) {
     m_t[i] = [];
     v_t[i] = [];
@@ -238,10 +241,21 @@ static AdamUpdateWeights = function(learningRate) {
 	        derivative[i] = predicted[i] - target[i];
 	    }
 
-				//if is_nan(derivative[0])
-			//show_message("NAN los function")
 	    return derivative;
 	}
+
+	static Huber = function(predicted, target, threshold) {
+		
+	    var derivative = array_create(array_length(predicted));
+			for (var i = 0; i < array_length(target); i++) {		
+				if (abs(predicted[i] - target[i]) <= threshold) {
+					derivative[@i] = (predicted[i] - target[i]);
+				} else {
+					derivative[@i] = threshold * (predicted[i] - target[i]) / abs(predicted[i] - target[i]);
+				}
+			}
+	    return derivative;
+	}	
 
 	/// @func CategoricalCED - CategoricalCrossEntropyDerivative
 	/// @desc Производная функции потерь категориальной кросс-энтропии
@@ -258,7 +272,8 @@ static AdamUpdateWeights = function(learningRate) {
 	    for (var i = 0; i < array_length(target); i++) {
 	        // Убедитесь, что не происходит деления на 0
 	        var pred = clamp(predicted[i], .001, 1 - .001);
-	        derivative[i] = pred - target[i];
+	        //derivative[i] = pred - target[i];
+			derivative[i] = log2(pred) //если использовать log, то будет log2(1/0.99)=0.01
 	    }
 	    return derivative;
 	}
@@ -269,33 +284,39 @@ static AdamUpdateWeights = function(learningRate) {
 /// @param {array} target - целевые значения действий
 /// @param {array} old_log_probs - старые логарифмы вероятностей
 /// @param {array} advantages - преимущества, вычисленные с использованием GAE
-/// @param {real} clip_ratio - коэффициент для ограничения изменений
+/// @param {real} clip_ratio - коэффициент для ограничения изменений. значение между 0 и 1, например 0.1
 /// @return {array} - массив производных ошибки
-static PPOLossD = function(predicted, target, old_log_probs, advantages, clip_ratio) {
-    var new_log_probs = array_create(array_length(predicted), 0);
+static PPOLossD = function(predicted, target, old_probs, advantages, clip_ratio,total_predicted_softmax,total_predicted) {
     var derivatives = array_create(array_length(predicted), array_create(array_length(predicted[0]), 0));
 
     for (var i = 0; i < array_length(predicted); i++) {
-        // Используем target для получения вероятности выбранного действия
-        var action_prob = predicted[i][target[i]];
-        new_log_probs[i] = ln(action_prob);//action_prob-1;
+        var action = target[i];  // Индекс выбранного действия
 
-        var ratio = exp(new_log_probs[i] - old_log_probs[i]);
-        var surr1 = ratio * advantages[i];
-        var surr2 = clamp(ratio, 1 - clip_ratio, 1 + clip_ratio) * advantages[i];
+        // Вычисляем вероятность отношения для PPO
+		//показывает, на сколько процентов увеличилась или уменьшилась вероятность выполнения действия с учетом обновленной политики
+        var ratio = predicted[i][action] / old_probs[i][action];
 
-        // Loss derivative computation
-        var loss_gradient = -min(surr1, surr2); // Negative for gradient descent
 
-        // Обновляем производную для всех действий
-        for (var j = 0; j < array_length(predicted[i]); j++) {
-            if (j == target[i]) {
-                derivatives[i][j] = loss_gradient;
-            } else {
-                derivatives[i][j] = 0;
-            }
-        }
+        // Вычисляем unclipped и clipped потери
+        var unclipped_loss = ratio * advantages[i];
+        var clipped_ratio = clamp(ratio, 1 - clip_ratio, 1 + clip_ratio);
+        var clipped_loss = clipped_ratio * advantages[i];
+
+		
+        // Вычисляем минимизированный градиент
+		var ppo_loss_gradient = min(unclipped_loss, clipped_loss)
+
+
+        // Производная для выбранного действия (градиент)
+        derivatives[i][action] = total_predicted[i]-ppo_loss_gradient
+		//ln(total_predicted[i][action])*ppo_loss_gradient		(PPO)
+		//ln(total_predicted[i][action])*advantages[i]			(A2C)
+		//total_predicted[i]-advantages[i]						(MSE functional loss)
+		//-(1-total_predicted[i])*advantages[i]                 (CatCrossEntropy)
+		if keyboard_check(vk_shift)
+		show_message(derivatives[i][action])
     }
+
     return derivatives;
 }
 #endregion
@@ -306,13 +327,6 @@ static PPOLossD = function(predicted, target, old_log_probs, advantages, clip_ra
 
 
 //// Функция награды
-////чем дальше, тем больше в минус уходит награда
-//function rewardFunction(pos_agent, pos_goal) {
-//    var reward = abs(pos_agent - pos_goal)*0.02;
-//    return reward;
-//};
-
-// Функция награды
 // Чем ближе агент к цели по осям x и y, тем выше награда
 function rewardFunction(pos_agent, pos_goal) {
     var distance_x = abs(pos_agent[0] - pos_goal[0]); // расстояние по оси x
@@ -331,7 +345,7 @@ function rewardFunction(pos_agent, pos_goal) {
 	
 
 // Шаг в окружении
-function environmentStep(old_state,action) {
+function environmentStep(action) {
     // Обновляем позицию агента на основе действия
     if (action == 0) {
         x -= room_width * 0.02; // Движение влево
@@ -352,18 +366,18 @@ function environmentStep(old_state,action) {
     // Определяем, достигнута ли цель (окончание эпизода)
     var done = (abs(x / room_width - obj_target.x / room_width) < 0.1) && (abs(y / room_height - obj_target.y / room_height) < 0.1);
     
-    return [next_state, reward, done, old_state];
+    return [next_state, reward, done];
 }
 
 function getState() {
-	return [x / room_width, y / room_height]; //[obj_target.x / room_width, obj_target.y / room_height,x / room_width, y / room_height];
+	return [x / room_width, y / room_height,obj_target.x / room_width, obj_target.y / room_height]; //[obj_target.x / room_width, obj_target.y / room_height,x / room_width, y / room_height];
 }
 
 // Начальное состояние
 x_position_agent_start = x;
 y_position_agent_start = y;
 
-///Перезапуск окружения и агента
+
 function Restart() {
     // Обнуляем награды и временные шаги
     total_reward = 0;
@@ -380,7 +394,7 @@ function Restart() {
 	policy_network.timestep=0//служит для разгона оптимизаторов 
 	value_network.timestep=0//служит для разгона оптимизаторов 
 
-	//with obj_target //чтобы цель были в разных местах
+	//with obj_target //чтобы цель появлялась в разных местах
 	//{
 	//	x=random(room_width)
 	//	y=random(room_height)
@@ -394,13 +408,15 @@ function Restart() {
 /// @param {array} state - текущее состояние
 /// @param {real} action - текущее действие
 /// @param {real} reward - награда за действие
-/// @param {bool} done - флаг завершения эпизода
+/// @param {bool} next_state - следуюшее состояние
 /// @param {real} value - оценка функции ценности текущего состояния
-/// @param {real} log_prob - логарифм вероятности текущего действия
+/// @param {real} next_value - оценка будущего действия
+/// @param {real} log_prob - логариф действия
+/// @param {real} next_log_prob - логарифм вероятности текущего действия
 /// @return {void}
-function StoreData(state, action, reward, done, value, log_prob) {
-    // Добавляем данные в память
-    memory.add(state, action, reward, done, value, log_prob);
+function StoreData(state, action, reward, next_state, value, next_value, log_prob, next_log_prob) {
+    // Добавляем данные в память, включая новые параметры
+    memory.add(state, next_state, action, reward, value, next_value, log_prob, next_log_prob);
 }
 
 /// @func SampleAction
@@ -427,8 +443,8 @@ function SampleAction(probabilities) {
 gamma = 0.99; // Коэффициент дисконтирования
 lambda = 0.95; // Коэффициент для GAE
 clip_ratio = 0.2; // Коэффициент для ограничения изменений
-policy_learning_rate = 0.01;//0.01
-value_learning_rate = 0.1;//0.04
+policy_learning_rate = 0.02;//0.02
+value_learning_rate = 0.04;//0.04
 batch_size = 40; //20  Размер минибатча
 epochs = 1; // Количество эпох для обновления
 
@@ -439,13 +455,84 @@ timestep = 0;
 max_timesteps = 100; //40 Количество шагов до обновления
 
 // Создаём сеть политики
-policy_network = new mlp_array([2,5,4,4],[Tanh,Tanh,Tanh]);//policy_network = new mlp_array([2,3,4],[Tanh,Tanh]);
+policy_network = new mlp_array([4,5,4,4],[Tanh,Tanh,Tanh]);//policy_network = new mlp_array([2,3,4],[Tanh,Tanh]);
 
 // Создаём сеть критика (Value network)
-value_network = new mlp_array([2,5,4,1],[Tanh,Tanh,Tanh]);
+value_network = new mlp_array([4,5,4,1],[Tanh,Tanh,Tanh]);//LeakyReLU
 
 // Инициализируем память для PPO
 memory = new Memory();
 
 // Функция перезапуска
 Restart();
+
+
+
+#region interesting features
+// Функция для центрирования `advantage`
+function center_advantages(advantages) {
+    var mean_advantage = 0;
+    var iEnd = array_length(advantages);
+    
+    // Вычисление среднего значения `advantage`
+    for (var i = 0; i < iEnd; i++) {
+        mean_advantage += advantages[i];
+    }
+    mean_advantage /= iEnd;
+
+    // Центрирование `advantage`
+    for (var i = 0; i < iEnd; i++) {
+        advantages[i] -= mean_advantage;  // Отнимаем среднее значение
+    }
+    
+    return advantages;
+}
+
+// Функция гиперболического сглаживания для `return_val`
+function smooth_return_val(return_val) {
+    var smoothed_val = [];
+    for (var i = 0; i < array_length(return_val); i++) {
+        smoothed_val[i] = Tanh(return_val[i]);  // Применяем `tanh` для сглаживания
+    }
+    return smoothed_val;
+}
+
+function log_scale_rewards(rewards) {//прикольная
+    var scaled_rewards = [];
+    var iEnd = array_length(rewards);
+
+    for (var i = 0; i < iEnd; i++) {
+        scaled_rewards[i] = sign(rewards[i]) * logn(50,abs(rewards[i]) + 1);  // log-масштабирование с учетом знака
+    }
+
+    return scaled_rewards;
+}
+
+function normalize_episode_rewards(rewards) {//крутой код
+    var men = 0;
+    var stddev = 0;
+    var iEnd = array_length(rewards);
+
+    // Вычисление среднего
+    for (var i = 0; i < iEnd; i++) {
+        men += rewards[i];
+    }
+    men /= iEnd;
+
+    // Вычисление стандартного отклонения
+    for (var i = 0; i < iEnd; i++) {
+        stddev += power(rewards[i] - men, 2);
+    }
+    stddev = sqrt(stddev / iEnd);
+
+    // Нормализация
+    var normalized_rewards = [];
+    for (var i = 0; i < iEnd; i++) {
+        normalized_rewards[i] = (rewards[i] - men) / (stddev + 0.00001) /3;  // Стандартная нормализация
+    }
+
+    return normalized_rewards;
+}
+#endregion
+
+

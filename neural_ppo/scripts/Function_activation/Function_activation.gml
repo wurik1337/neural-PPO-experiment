@@ -58,7 +58,25 @@ function Relu(x) {
 /// @param {real} x - входное значение
 /// @return {real} - значение производной ReLU
 function ReluDerivative(x) {
-	return (x > 0) ? 1 : 0;
+	return (x > 0);
+}
+
+/// @func LeakyReLU
+/// @desc Функция активации Leaky ReLU
+/// @param {real} x - входное значение
+/// @param {real} alpha - коэффициент утечки
+/// @return {real} - результат функции Leaky ReLU
+function LeakyReLU(x) {
+    return (x >= 0) ? x : 0.01 * x;
+}
+
+/// @func LeakyReLUDerivative
+/// @desc Производная функции активации Leaky ReLU
+/// @param {real} x - входное значение
+/// @param {real} alpha - коэффициент утечки
+/// @return {real} - значение производной Leaky ReLU
+function LeakyReLUDerivative(x) {
+    return (x >= 0) ? 1 : 0.01;
 }
 #endregion
 

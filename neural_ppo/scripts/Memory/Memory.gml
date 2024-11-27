@@ -1,46 +1,57 @@
+// Script assets have changed for v2.3.0 see
+// https://help.yoyogames.com/hc/en-us/articles/360005277377 for more information
 function Memory() constructor {
     // Создание кортежа данных (буфера)
     enum typePPO {
-        states,         // Состояния
-        actions,        // Действия
-        rewards,        // Награды
-        dones,          // Флаг завершения эпизода
-        values,         // Оценки функции ценности текущих состояний
-        log_probs,      // Логарифмы вероятностей для текущих действий
-        advantages,     // Преимущества
-        returns         // Возвраты
+        states,         
+        next_states,
+        actions,        
+        rewards,             
+        values,        
+        next_values,
+        log_probs,
+        next_log_probs,
+        advantages,     
+        returns         
     }
     
+    // Буфер для хранения всех параметров
     states = [];
+    next_states = [];
     actions = [];
     rewards = [];
-    dones = [];
     values = [];
+    next_values = [];
     log_probs = [];
+    next_log_probs = [];
     advantages = [];
     returns = [];
     
     len_memory = 0; // Длина памяти
 
     // Добавление элементов в память
-    static add = function(state, action, reward, done, value, log_prob) {
+    static add = function(state, next_state, action, reward, value, next_value, log_prob, next_log_prob) {
         array_push(states, state);
+        array_push(next_states, next_state);
         array_push(actions, action);
         array_push(rewards, reward);
-        array_push(dones, done);
         array_push(values, value);
+        array_push(next_values, next_value);
         array_push(log_probs, log_prob);
+        array_push(next_log_probs, next_log_prob);
         len_memory += 1;
     }
 
     // Очистка памяти
     static clear = function() {
         array_clear(states);
+        array_clear(next_states);
         array_clear(actions);
         array_clear(rewards);
-        array_clear(dones);
         array_clear(values);
+        array_clear(next_values);
         array_clear(log_probs);
+        array_clear(next_log_probs);
         array_clear(advantages);
         array_clear(returns);
         len_memory = 0;
@@ -52,11 +63,13 @@ function Memory() constructor {
         for (var i = 0; i < array_length(states); i++) {
             var tupl = [
                 states[i],
+                next_states[i],
                 actions[i],
                 rewards[i],
-                dones[i],
                 values[i],
+                next_values[i],
                 log_probs[i],
+                next_log_probs[i],
                 advantages[i],
                 returns[i]
             ];
@@ -169,8 +182,11 @@ function calculate_advantage(rewards, values, next_values, gamma, lambda, use_ga
         }
     } else {
         for (var t = 0; t < array_length(rewards); t++) {
-            advantage[t] = next_values[t] - values[t];
-        }
+            advantage[t] = rewards[t] - values[t]; 
+			//advantage[t] = next_values[t] - values[t];
+			//default advantage[t] = rewards[t] + gamma * next_values[t] - values[t];
+
+		}
     }
 
     if (normalize) {

@@ -1,5 +1,4 @@
 /////////////////////-----------PPO
-
 // Шаг PPO
 // Инкремент таймстепа
 timestep += 1;
@@ -10,30 +9,37 @@ var old_state=getState()
 // Выбор действия
 policy_network.Forward(old_state);
 var logits = policy_network.output[policy_network.layerCount - 1];
-var action_probabilities = Softmax(logits);
+action_probabilities = Softmax(logits);
 var action = SampleAction(action_probabilities);
 
+
 // Выполняем шаг в окружении
-var result = environmentStep(old_state,action);
+var result = environmentStep(action);
 var next_state = result[0];
 var reward = result[1];
 var done = result[2];
 
-// Обновляем текущее состояние
-x = next_state[0] * room_width;
-y = next_state[1] * room_height;
 
 // Вычисление логарифма вероятности действия (log probability)
-policy_network.Forward(old_state);
-var action_probs = Softmax(policy_network.output[policy_network.layerCount - 1]);
-var log_prob = ln(action_probs[action]);
+var log_prob = ln(action_probabilities[action]);
+
+////// Вычисление логарифма вероятности действия (next_log probability)
+//logits = policy_network.Forward(next_state);
+//action_probs = Softmax(logits);
+//var next_log_prob = ln(action_probs[SampleAction(action_probs)]);
+
 
 // Вычисление ценности состояния (Value estimation)
 value_network.Forward(old_state);
 var value = value_network.output[value_network.layerCount - 1][0];
 
+// Вычисление будущую ценность состояния (next_Value)
+value_network.Forward(next_state);
+var next_value = value_network.output[value_network.layerCount - 1][0];
+
+
 // Сохраняем данные в память
-StoreData(old_state, action, reward, done, value, log_prob);
+StoreData(old_state, action, reward, next_state, value, next_value,action_probabilities,0);
 
 total_reward += reward;
 
@@ -43,38 +49,56 @@ total_reward += reward;
 if (timestep % max_timesteps == 0) {
     // Вычисляем возвраты (returns) и преимущества (advantages)
 	// GAE и Discount плохо работают, но вот normalize все хорошо работают
-    memory.returns = calculate_returns(memory.rewards, gamma, false, false);//true, false
-    memory.advantages = calculate_advantage(memory.rewards, memory.values, memory.returns, gamma, lambda, false, false);//true true
-    //show_debug_message($"{memory.advantages}  -advantage");
-	//show_debug_message($"{memory.rewards}  -rewards");
-	//show_debug_message($"{memory.actions}  -actions");
-	//show_debug_message($"{memory.returns}  -returns")
-	//show_debug_message($"{memory.states}  -stats")
-	
-	
+    memory.returns = calculate_returns(memory.rewards, gamma, false, false);
+	//memory.returns = log_scale_rewards(memory.returns)
+	//memory.returns = normalize_episode_rewards(memory.returns)
+
+    memory.advantages = calculate_advantage(memory.returns, memory.values, memory.next_values, gamma, lambda, false, false);
+	//memory.advantages = log_scale_rewards(memory.advantages)
+	//memory.advantages = center_advantages(memory.advantages)
+
+	if keyboard_check(vk_alt)
+	show_message(["return",memory.returns,"advantage",memory.advantages])
+
+
+
 	// Создаем минибатчи
     var memory_tuples = memory.tuple();
     for (var epoch = 0; epoch < epochs; epoch++) {
-        var mini_batch = memory.minibatch(memory_tuples, batch_size);
+		var mini_batch = memory.minibatch(memory_tuples, batch_size);
 
-        for (var i = 0; i < array_length(mini_batch); i++) {
-            var tuple = mini_batch[i];
-            var state = tuple[0];
-            var action = tuple[1];
-            var reward = tuple[2];
-            var done = tuple[3];
-            var value = tuple[4];
-            var old_log_prob = tuple[5];
-            var advantage = tuple[6];
-            var return_val = tuple[7];
+		for (var i = 0; i < array_length(mini_batch); i++) {
+		    var tuple = mini_batch[i];
+		    var state = tuple[0];
+		    var next_state = tuple[1];
+		    var action = tuple[2];
+		    var reward = tuple[3];
+		    var value = tuple[4];
+		    var next_value = tuple[5];
+		    var log_prob = tuple[6];
+		    var next_log_prob = tuple[7];
+		    var advantage = tuple[8];
+		    var return_val = tuple[9];
+
+	
+
 
             // Обновляем политики
-            policy_network.Forward(state);
+			//из-за того что этот код в цикле мы обновляем веса каждый раз, и из-за этого обновляется сеть
+			//поэтому new_state ненужен
+            policy_network.Forward(next_state);
             var new_logits = policy_network.output[policy_network.layerCount - 1];
             var new_action_probabilities = Softmax(new_logits);
 			
+			//это для проверки, пусть будет 
+			//а вот Forward(state) неубирай, он нужен для обнавления весов
+			policy_network.Forward(state);
+			var total_prediction = policy_network.output[policy_network.layerCount - 1];
+            var total_prediction_softmax = Softmax(total_prediction);
+			
 			// Вычисляем производную функции потерь для политики
-            var policy_loss_gradient = policy_network.PPOLossD([new_action_probabilities], [action], [old_log_prob], [advantage], clip_ratio);
+            var policy_loss_gradient = policy_network.PPOLossD([new_action_probabilities], [action], [log_prob], [advantage], clip_ratio,[total_prediction_softmax],total_prediction);//[total_prediction] //logits
+
 			
 
             // Обратное распространение и обновление весов политики
@@ -83,7 +107,8 @@ if (timestep % max_timesteps == 0) {
 
             // Обновляем критика
             value_network.Forward(state);
-            var value_loss_gradient = value_network.MeanSED(value_network.output[value_network.layerCount - 1], [return_val]);
+            var value_loss_gradient = value_network.MeanSED(value_network.output[value_network.layerCount - 1], [return_val]);//return_val//return_val+gamma*next_value
+
 			
             // Обратное распространение и обновление весов критика
             value_network.LossFunction(value_loss_gradient);
@@ -93,4 +118,5 @@ if (timestep % max_timesteps == 0) {
     }
     // Перезапуск окружения и агента
     Restart();
+
 }

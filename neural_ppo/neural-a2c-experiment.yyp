@@ -1,6 +1,6 @@
 {
   "$GMProject":"",
-  "%Name":"neural_ppo",
+  "%Name":"neural-a2c-experiment",
   "AudioGroups":[
     {"$GMAudioGroup":"","%Name":"audiogroup_default","name":"audiogroup_default","resourceType":"GMAudioGroup","resourceVersion":"2.0","targets":-1,},
   ],
@@ -32,9 +32,9 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.6.2.162",
+    "IDEVersion":"2024.8.1.171",
   },
-  "name":"neural_ppo",
+  "name":"neural-a2c-experiment",
   "resources":[
     {"id":{"name":"fnt_debug","path":"fonts/fnt_debug/fnt_debug.yy",},},
     {"id":{"name":"fnt_debugSm","path":"fonts/fnt_debugSm/fnt_debugSm.yy",},},
